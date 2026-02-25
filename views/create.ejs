@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Create Survey</title>
+  <style>body{font-family:Arial,Helvetica,sans-serif;max-width:800px;margin:30px auto;padding:0 16px}label{display:block;margin-top:8px}</style>
+</head>
+<body>
+  <h1>Create a Survey / Form</h1>
+  <form method="post" action="/create">
+    <label>Title<br><input name="title" style="width:100%" placeholder="Survey title"></label>
+    <label>
+      <input type="radio" name="mode" value="local" id="mode_local" checked>
+      <label for="mode_local">Local form (questions below)</label>
+      <input type="radio" name="mode" value="embed" id="mode_embed">
+      <label for="mode_embed">Embed external form (paste iframe or URL)</label>
+    </label>
+
+    <div id="local_fields">
+      <label>Questions (one per line or comma-separated)<br>
+        <textarea name="questions" rows="6" style="width:100%" placeholder="Question 1\nQuestion 2\nQuestion 3"></textarea>
+      </label>
+    </div>
+
+    <div id="embed_fields" style="display:none">
+      <label>Embed HTML (paste iframe or script block)<br>
+        <textarea name="embedHtml" rows="6" style="width:100%" placeholder="<iframe src=...></iframe>"></textarea>
+      </label>
+      <label>Or Embed URL (paste a URL to use in an iframe)<br>
+        <input name="embedUrl" style="width:100%" placeholder="https://form.typeform.com/to/...">
+      </label>
+    </div>
+    <button type="submit">Create</button>
+  </form>
+  <p><a href="/">Back</a></p>
+  <script>
+    const modeLocal = document.getElementById('mode_local');
+    const modeEmbed = document.getElementById('mode_embed');
+    const localFields = document.getElementById('local_fields');
+    const embedFields = document.getElementById('embed_fields');
+    function updateMode(){
+      if (modeEmbed.checked){
+        localFields.style.display = 'none';
+        embedFields.style.display = 'block';
+      } else {
+        localFields.style.display = 'block';
+        embedFields.style.display = 'none';
+      }
+    }
+    modeLocal.addEventListener('change', updateMode);
+    modeEmbed.addEventListener('change', updateMode);
+    updateMode();
+  </script>
+</body>
+</html>

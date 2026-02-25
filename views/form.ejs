@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title><%= form.title %></title>
+  <style>body{font-family:Arial,Helvetica,sans-serif;max-width:800px;margin:30px auto;padding:0 16px}label{display:block;margin-top:8px}input[type=text],textarea{width:100%}</style>
+</head>
+<body>
+  <h1><%= form.title %></h1>
+  <p>Shareable link: <a href="<%= shareUrl %>"><%= shareUrl %></a></p>
+  <% if (form.embed && (form.embed.html || form.embed.url)) { %>
+    <div>
+      <% if (form.embed.html) { %>
+        <%- form.embed.html %>
+      <% } else { %>
+        <iframe src="<%= form.embed.url %>" style="width:100%;height:800px;border:0;"></iframe>
+      <% } %>
+    </div>
+    <p>This is an embedded external form. Responses are collected by the provider.</p>
+  <% } else { %>
+    <form method="post" action="/submit/<%= form.id %>">
+      <% form.questions.forEach((q, idx) => { %>
+        <label><%= q %><br>
+          <input type="text" name="q_<%= idx %>">
+        </label>
+      <% }) %>
+      <button type="submit">Submit</button>
+    </form>
+  <% } %>
+  <p><a href="/results/<%= form.id %>">View results</a> • <a href="/">Back</a></p>
+</body>
+</html>
