@@ -16,16 +16,27 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 const DATA_PATH = path.join(__dirname, 'data.json');
+let memoryData = { forms: [], responses: [] }; // In-memory fallback for Vercel
+
 function readData(){
+  // Try file storage first (works locally)
   try{
     const raw = fs.readFileSync(DATA_PATH, 'utf8');
     return JSON.parse(raw);
   }catch(e){
-    return { forms: [], responses: [] };
+    // Fallback to in-memory storage (used on Vercel or if file doesn't exist yet)
+    return memoryData;
   }
 }
+
 function writeData(data){
-  fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2));
+  memoryData = data; // Always update memory
+  // Try to write to file (works locally, silently fails on Vercel)
+  try{
+    fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2));
+  }catch(e){
+    // Silently fail on Vercel (no writable filesystem); data persists in memory during request
+  }
 }
 
 app.get('/', (req, res) => {
