@@ -18,29 +18,55 @@ app.use(bodyParser.json());
 const DATA_PATH = path.join(__dirname, 'data.json');
 let memoryData = { forms: [], responses: [] }; // In-memory fallback for Vercel
 
-function readData(){
-  // Try file storage first (works locally)
+// MongoDB support (optional)
+const { MongoClient } = require('mongodb');
+let db = null;
+async function connectDb(){
+  if (process.env.MONGO_URI){
+    const client = new MongoClient(process.env.MONGO_URI, { useUnifiedTopology: true });
+    await client.connect();
+    db = client.db();
+    console.log('Connected to MongoDB');
+  }
+}
+
+async function readData(){
+  // if Mongo configured, pull from database
+  if (db){
+    const forms = await db.collection('forms').find().toArray();
+    const responses = await db.collection('responses').find().toArray();
+    return { forms, responses };
+  }
+  // fallback to file storage
   try{
     const raw = fs.readFileSync(DATA_PATH, 'utf8');
     return JSON.parse(raw);
   }catch(e){
-    // Fallback to in-memory storage (used on Vercel or if file doesn't exist yet)
     return memoryData;
   }
 }
 
-function writeData(data){
-  memoryData = data; // Always update memory
-  // Try to write to file (works locally, silently fails on Vercel)
+async function writeData(data){
+  memoryData = data;
+  if (db){
+    const formsCol = db.collection('forms');
+    const respCol = db.collection('responses');
+    // replace everything (simple for small apps)
+    await formsCol.deleteMany({});
+    if (data.forms.length) await formsCol.insertMany(data.forms);
+    await respCol.deleteMany({});
+    if (data.responses.length) await respCol.insertMany(data.responses);
+    return;
+  }
   try{
     fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2));
   }catch(e){
-    // Silently fail on Vercel (no writable filesystem); data persists in memory during request
+    // ignore
   }
 }
 
-app.get('/', (req, res) => {
-  const data = readData();
+app.get('/', async (req, res) => {
+  const data = await readData();
   res.render('index', { forms: data.forms });
 });
 
@@ -48,9 +74,8 @@ app.get('/create', (req, res) => {
   res.render('create');
 });
 
-app.post('/create', (req, res) => {
+app.post('/create', async (req, res) => {
   const { title, questions, mode, embedHtml, embedUrl } = req.body;
-  // questions expected as newline-separated or comma-separated
   let qs = [];
   if (questions){
     qs = questions.split(/\r?\n|,/).map(s => s.trim()).filter(Boolean);
@@ -62,30 +87,30 @@ app.post('/create', (req, res) => {
   }
   const id = uuidv4();
   const form = { id, title: title || 'Untitled survey', questions: qs, embed, createdAt: Date.now() };
-  const data = readData();
+  const data = await readData();
   data.forms.push(form);
-  writeData(data);
+  await writeData(data);
   res.redirect(`/form/${id}`);
 });
 
-app.get('/form/:id', (req, res) => {
+app.get('/form/:id', async (req, res) => {
   const id = req.params.id;
-  const data = readData();
+  const data = await readData();
   const form = data.forms.find(f => f.id === id);
   if (!form) return res.status(404).send('Form not found');
   const shareUrl = `${req.protocol}://${req.get('host')}/form/${id}`;
   res.render('form', { form, shareUrl });
 });
 
-app.post('/submit/:id', (req, res) => {
+app.post('/submit/:id', async (req, res) => {
   const id = req.params.id;
-  const data = readData();
+  const data = await readData();
   const form = data.forms.find(f => f.id === id);
   if (!form) return res.status(404).send('Form not found');
   const answers = form.questions.map((q, idx) => ({ question: q, answer: req.body[`q_${idx}`] || '' }));
   const response = { id: uuidv4(), formId: id, answers, submittedAt: Date.now() };
   data.responses.push(response);
-  writeData(data);
+  await writeData(data);
   res.redirect(`/thanks`);
 });
 
@@ -93,9 +118,9 @@ app.get('/thanks', (req, res) => {
   res.render('thanks');
 });
 
-app.get('/results/:id', (req, res) => {
+app.get('/results/:id', async (req, res) => {
   const id = req.params.id;
-  const data = readData();
+  const data = await readData();
   const form = data.forms.find(f => f.id === id);
   if (!form) return res.status(404).send('Form not found');
   const responses = data.responses.filter(r => r.formId === id);
@@ -103,9 +128,9 @@ app.get('/results/:id', (req, res) => {
 });
 
 // simple API to fetch form JSON
-app.get('/api/form/:id', (req, res) => {
+app.get('/api/form/:id', async (req, res) => {
   const id = req.params.id;
-  const data = readData();
+  const data = await readData();
   const form = data.forms.find(f => f.id === id);
   if (!form) return res.status(404).json({ error: 'not found' });
   res.json(form);
@@ -159,7 +184,11 @@ app.post('/sync/typeform/:id', async (req, res) => {
   }
 });
 
+// initialize storage
 if (!fs.existsSync(DATA_PATH)) writeData({ forms: [], responses: [] });
+
+// connect to Mongo if requested
+connectDb().catch(err => console.error('Mongo connection error', err));
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

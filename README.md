@@ -94,4 +94,17 @@ git push -u origin main
 
 ```bash
 npx vercel --prod
-```
+``` 
+### Using MongoDB for persistence
+
+To have data survive restarts (and work on Vercel), use a MongoDB database:
+
+1. Create a free cluster on MongoDB Atlas (https://cloud.mongodb.com).
+2. Obtain the connection string (it looks like `mongodb+srv://user:pass@cluster.mongodb.net/mydb?retryWrites=true&w=majority`).
+3. Add the URI as an environment variable:
+   - Locally: create a `.env` file with `MONGO_URI=your_uri`.
+   - On Vercel: add a GitHub secret `MONGO_URI` or set in the dashboard under Environment Variables.
+
+The server will automatically switch from file storage to Mongo when `MONGO_URI` is set. Data will then be shared between local and deployed instances.
+
+Once configured, push to GitHub and let the workflow redeploy.

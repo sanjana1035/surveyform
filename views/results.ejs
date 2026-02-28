@@ -45,7 +45,7 @@
                     <% }) %>
                     <td><%= new Date(r.submittedAt).toLocaleString() %></td>
                   <% } else if (r.raw) { %>
-                    <%-- For external synced responses, render JSON summary --%>
+                    <%# For external synced responses, render JSON summary %>
                     <td colspan="<%= Math.max(1, form.questions.length) %>"><pre class="raw"><%= JSON.stringify(r.raw, null, 2) %></pre></td>
                     <td><%= new Date(r.submittedAt).toLocaleString() %></td>
                   <% } else { %>
