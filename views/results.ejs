@@ -2,47 +2,64 @@
 <html>
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Results - <%= form.title %></title>
-  <style>body{font-family:Arial,Helvetica,sans-serif;max-width:900px;margin:30px auto;padding:0 16px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;padding:8px}</style>
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <h1>Results: <%= form.title %></h1>
-  <p><a href="/form/<%= form.id %>">Open form</a> • <a href="/">Home</a></p>
+  <header class="site-header">
+    <div class="container">
+      <h1 class="brand"><a href="/">Simple Survey App</a></h1>
+      <nav class="nav">
+        <a class="btn" href="/form/<%= form.id %>">Open form</a>
+      </nav>
+    </div>
+  </header>
 
-  <% if (responses.length === 0) { %>
-    <p>No responses yet.</p>
-  <% } else { %>
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <% form.questions.forEach(q => { %>
-            <th><%= q %></th>
-          <% }) %>
-          <th>Submitted At</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% responses.forEach((r, i) => { %>
-          <tr>
-            <td><%= i+1 %></td>
-            <% if (r.answers) { %>
-              <% r.answers.forEach(a => { %>
-                <td><%= a.answer %></td>
+  <main class="container">
+    <section class="card">
+      <h2>Results: <%= form.title %></h2>
+      <p class="muted"><a href="/">Home</a></p>
+
+      <% if (responses.length === 0) { %>
+        <p>No responses yet.</p>
+      <% } else { %>
+        <div class="table-wrap">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <% form.questions.forEach(q => { %>
+                  <th><%= q %></th>
+                <% }) %>
+                <th>Submitted At</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% responses.forEach((r, i) => { %>
+                <tr>
+                  <td><%= i+1 %></td>
+                  <% if (r.answers) { %>
+                    <% r.answers.forEach(a => { %>
+                      <td><%= a.answer %></td>
+                    <% }) %>
+                    <td><%= new Date(r.submittedAt).toLocaleString() %></td>
+                  <% } else if (r.raw) { %>
+                    <%-- For external synced responses, render JSON summary --%>
+                    <td colspan="<%= Math.max(1, form.questions.length) %>"><pre class="raw"><%= JSON.stringify(r.raw, null, 2) %></pre></td>
+                    <td><%= new Date(r.submittedAt).toLocaleString() %></td>
+                  <% } else { %>
+                    <td colspan="<%= Math.max(1, form.questions.length) %>">No structured answers</td>
+                    <td><%= new Date(r.submittedAt).toLocaleString() %></td>
+                  <% } %>
+                </tr>
               <% }) %>
-              <td><%= new Date(r.submittedAt).toLocaleString() %></td>
-            <% } else if (r.raw) { %>
-              <%-- For external synced responses, render JSON summary --%>
-              <td colspan="<%= Math.max(1, form.questions.length) %>"><pre style="white-space:pre-wrap;margin:0"><%= JSON.stringify(r.raw, null, 2) %></pre></td>
-              <td><%= new Date(r.submittedAt).toLocaleString() %></td>
-            <% } else { %>
-              <td colspan="<%= Math.max(1, form.questions.length) %>">No structured answers</td>
-              <td><%= new Date(r.submittedAt).toLocaleString() %></td>
-            <% } %>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table>
-  <% } %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+  </main>
+
 </body>
 </html>
